@@ -1,49 +1,66 @@
-use std::{error::Error, fs::write};
+#![feature(rustc_private)]
 
+use std::{
+    fs::{read_to_string, write},
+    path::PathBuf,
+    collections::HashMap,
+};
+use serde_derive::{Serialize, Deserialize};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
 struct Args {
     /// Input file
-    #[structopt(parse(from_os_str))]
-    input_file: std::path::PathBuf,
+    #[structopt(short = "i", long = "input", parse(from_os_str))]
+    input_file: PathBuf,
 
     /// Output file
-    #[structopt(parse(from_os_str))]
-    output_file: std::path::PathBuf,
+    #[structopt(short = "o", long = "output", parse(from_os_str))]
+    output_file: PathBuf,
+
+    /// JSON configuration file.
+    #[structopt(short = "c", long = "config", parse(from_os_str))]
+    config_path: Option<PathBuf>,
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[derive(Debug, Deserialize, Serialize)]
+struct Config {
+    changes: HashMap<String, String>,
+}
+
+pub fn normalize(text: &str, changes: &HashMap<String, String>) -> String {
+    changes.iter().fold(text.to_string(), |acc, (original, replacement)| {
+        acc.replace(original, replacement)
+    })
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::from_args();
 
     if !args.input_file.exists() {
         eprintln!("Input file doesn't exist. Quitting...");
-        return Ok(());
+        std::process::exit(1);
     }
 
-    let mut contents = std::fs::read_to_string(&args.input_file)?;
+    let contents = read_to_string(&args.input_file)?;
 
-    let normalized_text = replace_curly_quotes(&mut contents);
+    let config_path = match args.config_path {
+        Some(path) => path,
+        None => PathBuf::from("config.json")
+    };
 
-    write(&args.output_file, normalized_text)?;
+    let config = read_to_string(config_path)?;
+    let tmp: Config = serde_json::from_str(&config)?;
 
-    println!(
-        "File normalization completed. Normalized text saved to {}.",
-        args.output_file.display()
-    );
+    let result = normalize(contents.as_str(), &tmp.changes);
+
+    write(&args.output_file, result.clone())?;
+
+    if result != contents {
+        println!("File normalization complete. Replaced {} occurrences.", result.len());
+    } else {
+        println!("No modifications needed.");
+    }
 
     Ok(())
-}
-
-fn replace_curly_quotes(text: &str) -> String {
-    text.replace('\u{201C}', "\"")
-        .replace('\u{201D}', "\"")
-        .replace('\u{2018}', "'")
-        .replace('\u{2019}', "'")
-        .replace('\u{2026}', "...")
-        .replace('\u{2014}', "-")
-        .replace('\u{2013}', "-")
-        .replace('\u{ff02}', "\"")
-        .replace('\u{00a0}', " ")
-        .replace('\u{25cf}', "-")
 }
