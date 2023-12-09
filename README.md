@@ -38,19 +38,19 @@ $ ./file-normalizer-rs -i input.txt -o output.txt -c normalize.json
 ## Contributing
 
 Contributions are always welcome! If you'd like to contribute, please:
-    - Follow the [code of conduct](CODE_OF_CONDUCT.md).
-    - Keep a consistent coding style. To make sure your coding style remains the same, format your code with:
+  - Follow the [code of conduct](CODE_OF_CONDUCT.md).
+  - Keep a consistent coding style. To make sure your coding style remains the same, format your code with:
     ```console
     $ rustfmt --edition 2021 path/to/source_code
     ```
-    - Use Rust stable, rather than Rust nightly. If you notice my code contains code from Rust nightly,
-    feel free to change it to "stable" code.
-    - If you have to use an external library, please use lightweight ones
-    (eg. `ureq` over `reqwest`, `async-std` over `tokio`)
-    - Prefer using the standard library over reinventing the wheel.
-    - For proposing big changes, open an issue and describe:
-        - Why should the changes be implemented?
-        - What's the difference between using it and not using it?
+  - Use Rust stable, rather than Rust nightly. If you notice my code contains code from Rust nightly,
+  feel free to change it to "stable" code.
+  - If you have to use an external library, please use lightweight ones
+  (eg. `ureq` over `reqwest`, `async-std` over `tokio`)
+  - Prefer using the standard library over reinventing the wheel.
+  - For proposing big changes, open an issue and describe:
+    - Why should the changes be implemented?
+    - What's the difference between using it and not using it?
 
 ## License
 
