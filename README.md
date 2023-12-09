@@ -6,47 +6,52 @@ This program takes an input file containing text with special characters and rep
 
 1.  [Installation](#installation)
 2.  [Usage](#usage)
-3.  [License](#license)
-4.  [Acknowledgments](#acknowledgments)
-5.  [Contact](#contact)
+3.  [Contributing](#contributing)
+4.  [License](#license)
 
 ## Installation
 
-To use this program, you'll need to install Rust and its package manager, Cargo. Follow the official [Rust installation guide](https://www.rust-lang.org/tools/install) to get them set up.
+To build this project from source, you'll need to install [rustup](https://rustup.rs/), if you don't have it already. Otherwise, you can download the precompiled binaries, from the Releases page.
 
 Once Rust and Cargo are installed, you can build and install this program using the following command:
 
-``` bash
-cargo install --path .
+```console
+$ cargo build --release
 ```
+
+If you'd like to, you can move the build executable (target/release/file-normalizer-rs) to wherever you'd like and run it.
 
 ## Usage
 
-After installing, you can use this program to normalize text files. Here's how to use it:
+After building from source, you can use this program to normalize text files.
 
-``` bash
-./file-normalizer-rs --input <input_file_path> --output <output_file_path> --config your_config_file.json
+```console
+$ ./file-normalizer-rs --input path/to/input.txt --output path/to/output.txt --config config_file.json
 ```
 
-Replace `<input_file_path>` with the path to the input text file that you want to normalize and `<output_file_path>` with the path where you want to save the normalized text.
+ For example:
 
-Example:
-
-``` bash
-./file-normalizer-rs -i input.txt -o output.txt -c file-normalizer.json
+```console
+$ ./file-normalizer-rs -i input.txt -o output.txt -c normalize.json
 ```
+
+## Contributing
+
+Contributions are always welcome! If you'd like to contribute, please:
+    - Follow the [code of conduct](CODE_OF_CONDUCT.md).
+    - Keep a consistent coding style. To make sure your coding style remains the same, format your code with:
+    ```console
+    $ rustfmt --edition 2021 path/to/source_code
+    ```
+    - Use Rust stable, rather than Rust nightly. If you notice my code contains code from Rust nightly,
+    feel free to change it to "stable" code.
+    - If you have to use an external library, please use lightweight ones
+    (eg. `ureq` over `reqwest`, `async-std` over `tokio`)
+    - Prefer using the standard library over reinventing the wheel.
+    - For proposing big changes, open an issue and describe:
+        - Why should the changes be implemented?
+        - What's the difference between using it and not using it?
 
 ## License
 
-This project is licensed under the GNU GPLv3 License. See the [LICENSE](LICENSE.md) file for details.
-
-## Acknowledgments
-
-I'd like to give credit to the following libraries and tools used in this project:
-
-  - [StructOpt](https://crates.io/crates/structopt) - for command-line argument parsing in Rust.
-  - [Serde](https://crates.io/crates/serde) - JSON parsing.
-
-## Contact
-
-If you have any questions or need further assistance, you can contact me at <walker84837@gmail.com>.
+This project is licensed under the [GNU General Public License, version 3](LICENSE.md).
