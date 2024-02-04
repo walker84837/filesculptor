@@ -2,7 +2,7 @@ BUILD_COMMAND = cargo build --release
 OUTPUT_FILE = file-normalizer
 
 clean:
-	rm -rf ./file-normalizer-rs* Cargo.lock
+	rm -rf ./$(OUTPUT_FILE)* Cargo.lock
 	cargo clean
 windows-release:
 	$(BUILD_COMMAND) --target x86_64-pc-windows-gnu
