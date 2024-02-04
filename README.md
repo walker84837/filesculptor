@@ -7,11 +7,9 @@ symbols.
 
 ## Table of Contents
 
-  - [Introduction](#introduction)
   - [Installation](#installation)
       - [Building From Source](#building-from-source)
   - [Configuration](#configuration)
-  - [Requirements](#requirements)
   - [Examples](#examples)
   - [Contributing](#contributing)
   - [License](#license)
