@@ -1,30 +1,50 @@
-use anyhow::{Error, Result};
+use anyhow::{anyhow, Result};
+use clap::Parser;
 use serde_derive::Deserialize;
 use std::{
-    fs,
     collections::HashMap,
+    fs::{self, File},
+    io::{BufReader, BufWriter, Read, Write},
     path::PathBuf,
 };
-use structopt::StructOpt;
 
-#[derive(StructOpt)]
+#[derive(Parser)]
 struct Args {
-    /// File to normalize
-    #[structopt(short = "i", long = "input", parse(from_os_str))]
+    #[arg(short, long = "input", help = "File to normalize")]
     input_file: PathBuf,
 
-    /// Output file
-    #[structopt(short = "o", long = "output", parse(from_os_str))]
+    #[arg(short, long = "output", help = "Output file")]
     output_file: PathBuf,
 
-    /// JSON configuration file
-    #[structopt(
-        short = "c",
+    #[arg(
+        short,
         long = "config",
-        default_value = "config.json",
-        parse(from_os_str)
+        help = "JSON configuration file",
+        default_value = "config.json"
     )]
     config_path: PathBuf,
+}
+
+struct FileOperations;
+
+impl FileOperations {
+    pub fn read_file(path: String) -> Result<String> {
+        let file = File::open(path)?;
+
+        let mut reader = BufReader::new(file);
+        let mut contents = String::new();
+        reader.read_to_string(&mut contents)?;
+        
+        Ok(contents)
+    }
+
+    pub fn write(path: String, contents: &[u8]) -> Result<()> {
+        let file = File::create(path)?;
+
+        let mut reader = BufWriter::new(file);
+        reader.write_all(contents)?;
+        Ok(())
+    }
 }
 
 #[derive(Deserialize)]
@@ -40,21 +60,28 @@ pub fn normalize(text: &str, changes: &HashMap<String, String>) -> String {
         })
 }
 
+fn load_config(config_path: &PathBuf) -> Result<Config> {
+    let config_content = fs::read_to_string(config_path)?;
+    let contents = serde_json::from_str(&config_content)?;
+    Ok(contents)
+}
+
 fn main() -> Result<()> {
-    let args = Args::from_args();
+    let args = Args::parse();
+    let pathbuf_to_string = |path: PathBuf| -> String {
+        path.to_string_lossy().into_owned()
+    };
 
     if !args.input_file.exists() {
-        let error_msg = format!("Input file doesn't exist. Quitting...");
-        return Err(Error::msg(error_msg));
+        return Err(anyhow!("Input file doesn't exist. Quitting..."));
     }
 
-    let contents = fs::read_to_string(&args.input_file)?;
-    let config = fs::read_to_string(args.config_path)?;
+    let contents = FileOperations::read_file(pathbuf_to_string(args.input_file))?;
 
-    let tmp: Config = serde_json::from_str(&config)?;
+    let config = load_config(&args.config_path)?;
+    let result = normalize(contents.as_str(), &config.changes);
 
-    let result = normalize(contents.as_str(), &tmp.changes);
-    fs::write(&args.output_file, &result)?;
+    FileOperations::write(pathbuf_to_string(args.output_file), &result.as_bytes())?;
 
     if result != contents {
         println!(
@@ -62,7 +89,7 @@ fn main() -> Result<()> {
             result.len()
         );
     } else {
-        println!("INFO: Modifications were applied, but nothing changed.");
+        println!("Modifications were applied, but nothing changed.");
     }
 
     Ok(())

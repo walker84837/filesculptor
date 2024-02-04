@@ -1,57 +1,76 @@
 # file-normalizer-rs
 
-This program takes an input file containing text with special characters and replaces them with their corresponding ASCII equivalents.
+file-normalizer-rs is a simple tool designed to replace special characters in an
+input file with their equivalent ASCII characters. Its primary purpose is to
+ease text processing tasks by reducing inconsistencies caused by non-ASCII
+symbols.
 
 ## Table of Contents
 
-1.  [Installation](#installation)
-2.  [Usage](#usage)
-3.  [Contributing](#contributing)
-4.  [License](#license)
+  - [Introduction](#introduction)
+  - [Installation](#installation)
+      - [Building From Source](#building-from-source)
+  - [Configuration](#configuration)
+  - [Requirements](#requirements)
+  - [Examples](#examples)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ## Installation
 
-To build this project from source, you'll need to install [rustup](https://rustup.rs/), if you don't have it already. Otherwise, you can download the precompiled binaries, from the Releases page.
+The easiest way to obtain file-normalizer-rs is via pre-compiled packages
+available on its GitHub releases page and choose the appropriate release archive
+depending on your operating system (Windows or Linux).
 
-Once Rust and Cargo are installed, you can build and install this program using the following command:
+### Building from source
 
-```console
-$ cargo build --release
-```
+To build from source you need [rustup](https://rustup.rs/). Follow these
+instructions to build file-normalizer-rs from source:
 
-If you'd like to, you can move the build executable (target/release/file-normalizer-rs) to wherever you'd like and run it.
+1.  Clone the repository to your local machine:
+    ``` console
+    git clone https://github.com/walker84837/file-normalizer-rs.git
+    cd file-normalizer-rs
+    ```
+2.  Run the following commands to build the binary:
+    ``` console
+    cargo build --release
+    ```
+3.  After the compilation, find the generated binary inside the `target/release`
+    folder.
 
-## Usage
+## Configuration
 
-After building from source, you can use this program to normalize text files.
+file-normalizer is configured by a JSON file. Consult the [documentation](docs/)
+within the repo for reference.
 
-```console
-$ ./file-normalizer-rs --input path/to/input.txt --output path/to/output.txt --config config_file.json
-```
+## Examples
 
- For example:
+Normalize a file named `input.txt`:
 
-```console
-$ ./file-normalizer-rs -i input.txt -o output.txt -c normalize.json
+``` console
+file-normalizer-rs --input input.txt --output normalized_input.txt --config custom-config.json
 ```
 
 ## Contributing
 
-Contributions are always welcome! If you'd like to contribute, please:
+We appreciate all kinds of contributions – bug reports, feature requests,
+documentation updates, etc. Feel free to submit a PR or open an issue discussing
+potential enhancements. Before contributing:
+
   - Follow the [code of conduct](CODE_OF_CONDUCT.md).
-  - Keep a consistent coding style. To make sure your coding style remains the same, format your code with:
-    ```console
+  - Keep a consistent coding style. To make sure your coding style remains the
+    same, format your code with:
+    ``` console
     $ rustfmt --edition 2021 path/to/source_code
     ```
-  - Use Rust stable, rather than Rust nightly. If you notice my code contains code from Rust nightly,
-  feel free to change it to "stable" code.
-  - If you have to use an external library, please use lightweight ones
-  (eg. `ureq` over `reqwest`, `async-std` over `tokio`)
+  - Use Rust stable, rather than Rust nightly.
+  - If you have to use an external library, please use lightweight ones (ie.
+    `ureq` over `reqwest`, `async-std` over `tokio`)
   - Prefer using the standard library over reinventing the wheel.
-  - For proposing big changes, open an issue and describe:
-    - Why should the changes be implemented?
-    - What's the difference between using it and not using it?
+
+Please stick to Rust's official style guidelines while submitting patches.
 
 ## License
 
-This project is licensed under the [GNU General Public License, version 3](LICENSE.md).
+file-normalizer-rs is distributed under the terms of [GNU GPLv3](LICENSE.md).

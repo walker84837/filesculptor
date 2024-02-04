@@ -1,15 +1,14 @@
 BUILD_COMMAND = cargo build --release
+OUTPUT_FILE = file-normalizer
 
 clean:
-	cargo clean
 	rm -rf ./file-normalizer-rs* Cargo.lock
-	cargo check
 	cargo clean
 windows-release:
 	$(BUILD_COMMAND) --target x86_64-pc-windows-gnu
-	mv target/x86_64-pc-windows-gnu/release/file-normalizer-rs.exe .
-	sha256sum file-normalizer-rs.exe > ./file-normalizer-rs.exe.sha256
+	mv target/x86_64-pc-windows-gnu/release/file-normalizer-rs.exe ./$(OUTPUT_FILE).exe
+	sha256sum $(OUTPUT_FILE).exe > ./$(OUTPUT_FILE).exe.sha256
 nix-release:
 	$(BUILD_COMMAND)
-	mv target/release/file-normalizer-rs .
-	sha256sum file-normalizer-rs > ./file-normalizer-rs.sha256
+	mv target/release/file-normalizer-rs ./$(OUTPUT_FILE)
+	sha256sum $(OUTPUT_FILE) > ./$(OUTPUT_FILE).sha256
