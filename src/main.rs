@@ -5,16 +5,13 @@ use std::{collections::HashMap, fs, path::PathBuf};
 
 #[derive(Parser)]
 struct Args {
-    /// File to normalize
-    #[arg(short, long = "input")]
+    #[arg(help = "File to normalize")]
     input_file: PathBuf,
 
-    /// Output file
-    #[arg(short, long = "output")]
+    #[arg(short, help = "Output file")]
     output_file: PathBuf,
 
-    /// JSON configuration file
-    #[arg(long = "config", default_value = "config.json")]
+    #[arg(short, help = "JSON configuration file", default_value = "config.json")]
     config_path: PathBuf,
 }
 
@@ -35,7 +32,7 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     if !args.input_file.exists() {
-        return Err(anyhow!("Input file doesn't exist. Quitting..."));
+        return Err(anyhow!("Input file doesn't exist."));
     }
 
     let contents = fs::read_to_string(args.input_file)?;
@@ -52,7 +49,7 @@ fn main() -> Result<()> {
             result.len()
         );
     } else {
-        println!("INFO: Modifications were applied, but nothing changed.");
+        println!("Modifications were applied, but nothing changed.");
     }
 
     Ok(())

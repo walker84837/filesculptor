@@ -31,13 +31,7 @@ If you'd like to, you can move the build executable
 After building from source, you can use this program to normalize text files.
 
 ``` console
-$ ./transmutext-rs --input path/to/input.txt --output path/to/output.txt --config config_file.json
-```
-
-For example:
-
-``` console
-$ ./transmutext-rs -i input.txt -o output.txt -c normalize.json
+$ ./transmutext-rs path/to/input.txt -o path/to/output.txt -c path/to/config.json
 ```
 
 ## Contributing
