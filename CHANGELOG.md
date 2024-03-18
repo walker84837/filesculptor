@@ -7,12 +7,11 @@ project adheres to [Semantic Versioning](https://semver.org/).
 
 ## \[Unreleased\]
 
-## \[0.2.2\] - 2024-02-04
+## \[0.3.0\] - 2024-03-18
 
 ### Changed
 
-  - Switched from StructOpt to Clap derive for command-line argument parsing.
-  - Improved file I/O by using a BufReader and a BufWriter.
+  - Change the project name from `file-normalizer-rs` to `transmutext-rs`.
 
 ## \[0.2.1\] - 2023-12-09
 
