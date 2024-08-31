@@ -1,56 +1,78 @@
 # JSON Configuration
 
-This guide offers instructions on how to configure the JSON file for specifying
-text replacements during the file normalization process. The configuration file
-enables the definition of a series of modifications to be implemented in the
-input file's content.
+This guide provides instructions on configuring the JSON file for specifying text replacements during the file normalization process. The configuration file allows you to define a series of modifications to be applied to the content of the input file.
 
 ## Table of Contents
 
   - [Configuration Structure](#configuration-structure)
-      - [Changes](#changes)
+    - [Changes](#changes)
   - [Replacing Unicode Characters](#replacing-unicode-characters)
+  - [Regex Replacements](#regex-replacements)
 
 ## Configuration Structure
 
-The JSON configuration file comprises a solitary object containing a "changes"
-field that specifies the replacements to be executed.
+The JSON configuration file is a single object containing a "changes" field that specifies the replacements to be made.
 
 ### Changes
 
-The "changes" field is a dictionary, where each key represents the original
-string, while the corresponding value represents the replacement string.
+The "changes" field is a dictionary where each key represents the original string, and the corresponding value specifies the replacement. Replacements can be either direct string substitutions or regex-based.
 
-Here's an example which replaces every asterisk with a dash, and replaces every
-single quote with a double quote
+**Example of direct replacements:**
 
-``` json
+```json
 {
-  "changes": {
-    "*": "-",
-    "'": "\"",
-  }
+    "changes": {
+      "*": "-",
+      "'": "\""
+    }
 }
 ```
 
-## Replacing Unicode Characters
+### Replacing Unicode Characters
 
-To replace Unicode characters in your text, define the escape sequence of each
-Unicode character as a key in the "changes" field, and assign the desired
-replacement string as the corresponding value.
+To replace Unicode characters, define the escape sequence for each Unicode character as a key in the "changes" field and assign the desired replacement string as the corresponding value.
 
-If you want to replace `'\u{201C}'` with a double quote `"`, and `'\u{201D}'`
-with another double quote `"`, your configuration would look like this:
+**Example:**
 
-``` json
+To replace `'\u{201C}'` with a double quote `"` and `'\u{201D}'` with another double quote `"`, your configuration would look like this:
+
+```json
 {
-  "changes": {
-    "\\u{201C}": "\"",
-    "\\u{201D}": "\""
-  }
+    "changes": {
+        "\\u{201C}": "\"",
+        "\\u{201D}": "\""
+    }
 }
 ```
 
-This documentation is licensed under the GNU Free Documentation License (GFDL),
-and all examples are licensed under the GNU General Public License, version 3
-(GPLv3).
+### Regex Replacements
+
+You can also specify replacements using regular expressions. For regex-based replacements, use the following structure where the key is the original string and the value is an object containing the `pattern` and `replacement`.
+
+**Example:**
+
+To replace sequences of one or more dots with a single dot, and to replace `'` with `’`:
+
+```json
+{
+    "changes": {
+        "'": "’",
+        "\"": "”",
+        "!": ".",
+        "example": {
+            "pattern": "[.]+",
+            "replacement": "."
+        }
+    }
+}
+```
+
+In this example:
+- `'` is replaced with `’`
+- `"` is replaced with `”`
+- `!` is replaced with `.`
+- `example` is a key with regex pattern `[.]+` that matches one or more dots and replaces them with a single dot.
+
+---
+
+This documentation is licensed under the [GNU Free Documentation License (GFDL)](LICENSE.md), and all examples are licensed under the [GNU General Public License, version 3 (GPLv3)](../LICENSE.md).
