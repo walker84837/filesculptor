@@ -1,9 +1,21 @@
 [package]
-name = "transmutext-rs"
-version = "0.3.0"
+name = "filesculptor"
+version = "0.4.0"
 edition = "2021"
+license = "GPL-3.0"
+categories = ["command-line-utilities"]
+keywords = ["command-line", "cli"]
+readme = "README.md"
+repository = "https://github.com/walker84837/filesculptor-rs"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+debug = false
+
+[profile.release]
+strip = true
+lto = true
+overflow-checks = true
+panic = "abort"
 
 [dependencies]
 serde_derive = "1.0"
@@ -11,3 +23,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 clap = { version = "4.5.1", features = ["derive"] }
+log = "0.4.22"
+simple_logger = { version = "5.0.0", features = ["timestamps"] }
+regex = "1.10.6"
+thiserror = "1.0.63"
