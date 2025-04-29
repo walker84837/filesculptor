@@ -1,12 +1,12 @@
 [package]
 name = "filesculptor"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 license = "GPL-3.0"
 categories = ["command-line-utilities"]
 keywords = ["command-line", "cli"]
 readme = "README.md"
-repository = "https://github.com/walker84837/filesculptor-rs"
+repository = "https://github.com/walker84837/filesculptor"
 
 [profile.dev]
 debug = false
