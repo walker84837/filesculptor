@@ -32,3 +32,6 @@ globset = "0.4.16"
 futures-lite = "2.6.0"
 async-walkdir = "2.1.0"
 mlua = { version = "0.10.3", features = ["luajit", "vendored", "async", "send"] }
+
+[dev-dependencies]
+tempfile = "3"
