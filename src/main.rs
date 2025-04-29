@@ -1,26 +1,49 @@
-use anyhow::{bail, Context, Result};
-use clap::Parser;
-use log::{error, info, LevelFilter};
+use anyhow::{Context, Result, bail};
+use clap::{Parser, Subcommand};
+use globset::Glob;
+
+use async_walkdir::WalkDir;
+use futures_lite::stream::StreamExt;
+
+use log::{LevelFilter, error, info};
+use mlua::Lua;
 use simple_logger::SimpleLogger;
 use std::{
     fs,
     io::{self, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
+use tokio::fs as tokio_fs;
 
+mod lua_api;
 mod replace_strings;
-use replace_strings::{replace_strings, Config};
+use replace_strings::{Config, replace_strings};
 
 #[derive(Parser)]
 #[clap(
     name = "filesculptor",
-    about = "Modify files by replacing specific strings or using regular expressions."
+    about = "Modify files by replacing specific strings or using regular expressions.",
+    version
 )]
 struct Args {
-    #[clap(help = "replace_strings")]
-    input_file: PathBuf,
+    #[clap(subcommand)]
+    command: Command,
+}
 
-    #[clap(short, help = "Output file")]
+#[derive(Subcommand)]
+enum Command {
+    /// Process files using CLI configuration
+    Run(RunArgs),
+    /// Execute processing through Lua scripting
+    Lua(LuaArgs),
+}
+
+#[derive(Parser)]
+struct RunArgs {
+    #[clap(help = "Input file or directory")]
+    input_path: PathBuf,
+
+    #[clap(short, help = "Output file (for single file processing)")]
     output_file: Option<PathBuf>,
 
     #[clap(short, help = "Configuration JSON file", default_value = "config.json")]
@@ -46,78 +69,105 @@ struct Args {
         help = "Interactive mode to confirm changes before applying them"
     )]
     interactive: bool,
+
+    #[clap(long, help = "Process files recursively")]
+    recursive: bool,
+
+    #[clap(long, help = "Filter files using a glob pattern")]
+    filter: Option<String>,
+
+    #[clap(long, help = "Invert the filter match")]
+    invert: bool,
 }
 
-fn load_config(config_path: &PathBuf) -> Result<Config> {
-    let config_content = fs::read_to_string(config_path)
-        .with_context(|| format!("Failed to read configuration file: {:?}", config_path))?;
+#[derive(Parser)]
+struct LuaArgs {
+    /// Path to Lua script file
+    #[clap(help = "Path to Lua script file")]
+    script: PathBuf,
 
-    let config_ext = config_path
-        .extension()
-        .and_then(std::ffi::OsStr::to_str)
-        .unwrap_or_default();
-
-    let config: Config = match config_ext {
-        "json" => serde_json::from_str(&config_content)
-            .with_context(|| "Failed to parse JSON configuration")?,
-        _ => bail!("Unsupported configuration file format"),
-    };
-
-    Ok(config)
+    #[clap(short, long, help = "Enable verbose mode")]
+    verbose: bool,
 }
 
-fn process_file(args: &Args, config: &Config) -> Result<()> {
-    let contents = fs::read_to_string(&args.input_file)
-        .with_context(|| format!("Failed to read input file: {:?}", &args.input_file))?;
-
-    let result = replace_strings(contents.as_str(), &config.changes)?;
+async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<()> {
+    let contents = tokio_fs::read_to_string(path).await?;
+    let result = replace_strings(&contents, &config.changes)?;
 
     if args.dry_run {
-        info!("Dry run mode: Changes that would be applied:\n{}", result);
+        info!(
+            "Dry run mode: Changes that would be applied to {:?}:\n{}",
+            path, result
+        );
         return Ok(());
     }
 
     if args.backup {
-        let backup_file = args.input_file.with_extension("bak");
-        fs::copy(&args.input_file, &backup_file)
-            .with_context(|| format!("Failed to create backup file: {:?}", backup_file))?;
+        let backup_file = path.with_extension("bak");
+        tokio_fs::copy(path, &backup_file).await?;
         info!("Backup created at {:?}", backup_file);
     }
 
     if args.interactive {
         let mut input = String::new();
-
-        println!("Proposed changes:\n{}", result);
+        println!("Proposed changes for {:?}:\n{}", path, result);
         print!("Apply changes? (y/N): ");
-
-        io::stdout().flush().unwrap();
+        io::stdout().flush()?;
         io::stdin().read_line(&mut input)?;
-
         if input.trim().to_lowercase() != "y" {
-            info!("Changes were not applied.");
+            info!("Changes for {:?} were not applied.", path);
             return Ok(());
         }
     }
 
-    if let Some(path) = &args.output_file {
-        fs::write(path, &result)
-            .with_context(|| format!("Failed to write to output file: {:?}", &args.output_file))?;
+    if let Some(output_path) = &args.output_file {
+        tokio_fs::write(output_path, result.as_bytes()).await?;
     } else {
-        print!("{result}");
+        // Handle single file output to stdout
+        print!("{}", result);
     }
 
-    if result != contents {
-        info!("File normalization complete. Changes were applied.");
-    } else {
-        info!("Modifications were applied, but nothing changed.");
+    info!("Processed file: {:?}", path);
+    Ok(())
+}
+
+async fn process_recursive(args: &RunArgs, config: &Config) -> Result<()> {
+    let filter_glob = args.filter.as_ref().map(|f| {
+        Glob::new(f)
+            .expect("Invalid glob pattern")
+            .compile_matcher()
+    });
+
+    let mut walkdir = WalkDir::new(&args.input_path);
+    while let Some(entry) = walkdir.next().await {
+        let entry = entry?;
+        let path = entry.path();
+        if path.is_dir() {
+            continue;
+        }
+
+        let matches = filter_glob.as_ref().map_or(true, |g| g.is_match(&path));
+        let include = matches ^ args.invert;
+
+        if include {
+            process_file(args, config, &path).await?;
+        }
     }
 
     Ok(())
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = Args::parse();
 
+    match args.command {
+        Command::Run(run_args) => run_cli(run_args).await,
+        Command::Lua(lua_args) => run_lua(lua_args).await,
+    }
+}
+
+async fn run_cli(args: RunArgs) -> Result<()> {
     SimpleLogger::new()
         .with_level(if args.verbose {
             LevelFilter::Debug
@@ -126,20 +176,41 @@ fn main() -> Result<()> {
         })
         .env()
         .with_utc_timestamps()
-        .init()
-        .unwrap();
+        .init()?;
 
-    if !args.input_file.exists() {
-        error!("Input file doesn't exist: {:?}", args.input_file);
-        bail!("Input file doesn't exist.");
+    if !args.input_path.exists() {
+        error!("Input path doesn't exist: {:?}", args.input_path);
+        bail!("Input path doesn't exist.");
     }
 
-    let config = load_config(&args.config_path)?;
+    let config = Config::load(&args.config_path)?;
 
-    match process_file(&args, &config) {
-        Ok(_) => info!("Processing completed successfully."),
-        Err(e) => error!("Error during processing: {:?}", e),
+    if args.recursive {
+        process_recursive(&args, &config).await
+    } else {
+        if args.input_path.is_dir() {
+            error!("Input path is a directory. Use --recursive to process directories.");
+            bail!("Input path is a directory");
+        }
+        process_file(&args, &config, &args.input_path).await
     }
+}
 
+async fn run_lua(args: LuaArgs) -> Result<()> {
+    SimpleLogger::new()
+        .with_level(if args.verbose {
+            LevelFilter::Debug
+        } else {
+            LevelFilter::Info
+        })
+        .init()?;
+
+    let lua = Lua::new();
+    lua_api::init(&lua)?;
+
+    let script = fs::read_to_string(&args.script)
+        .with_context(|| format!("Failed to read Lua script: {:?}", args.script))?;
+
+    lua.load(&script).exec()?;
     Ok(())
 }
