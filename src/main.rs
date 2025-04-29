@@ -90,7 +90,7 @@ struct LuaArgs {
     verbose: bool,
 }
 
-async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<()> {
+async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<PathBuf> {
     let contents = tokio_fs::read_to_string(path).await?;
     let result = replace_strings(&contents, &config.changes)?;
 
@@ -99,7 +99,7 @@ async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<()
             "Dry run mode: Changes that would be applied to {:?}:\n{}",
             path, result
         );
-        return Ok(());
+        return Ok(path.to_path_buf());
     }
 
     if args.backup {
@@ -116,7 +116,7 @@ async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<()
         io::stdin().read_line(&mut input)?;
         if input.trim().to_lowercase() != "y" {
             info!("Changes for {:?} were not applied.", path);
-            return Ok(());
+            return Ok(path.to_path_buf());
         }
     }
 
@@ -128,15 +128,17 @@ async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<()
     }
 
     info!("Processed file: {:?}", path);
-    Ok(())
+    Ok(path.to_path_buf())
 }
 
-async fn process_recursive(args: &RunArgs, config: &Config) -> Result<()> {
+async fn process_recursive(args: &RunArgs, config: &Config) -> Result<Vec<PathBuf>> {
     let filter_glob = args.filter.as_ref().map(|f| {
         Glob::new(f)
             .expect("Invalid glob pattern")
             .compile_matcher()
     });
+
+    let mut processed_paths = Vec::new();
 
     let mut walkdir = WalkDir::new(&args.input_path);
     while let Some(entry) = walkdir.next().await {
@@ -150,11 +152,12 @@ async fn process_recursive(args: &RunArgs, config: &Config) -> Result<()> {
         let include = matches ^ args.invert;
 
         if include {
-            process_file(args, config, &path).await?;
+            let processed = process_file(args, config, &path).await?;
+            processed_paths.push(processed);
         }
     }
 
-    Ok(())
+    Ok(processed_paths)
 }
 
 #[tokio::main]
@@ -186,14 +189,15 @@ async fn run_cli(args: RunArgs) -> Result<()> {
     let config = Config::load(&args.config_path)?;
 
     if args.recursive {
-        process_recursive(&args, &config).await
+        process_recursive(&args, &config).await?;
     } else {
         if args.input_path.is_dir() {
             error!("Input path is a directory. Use --recursive to process directories.");
             bail!("Input path is a directory");
         }
-        process_file(&args, &config, &args.input_path).await
+        process_file(&args, &config, &args.input_path).await?;
     }
+    Ok(())
 }
 
 async fn run_lua(args: LuaArgs) -> Result<()> {

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use mlua::{AnyUserData, Lua, Table, UserData, UserDataMethods};
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, thread};
 use tokio::runtime::Runtime;
 
 use crate::replace_strings::{Config, Replacement};
@@ -68,34 +68,43 @@ pub fn init(lua: &Lua) -> Result<()> {
     )?;
 
     module.set(
+        "set_recursive",
+        lua.create_function(|lua, val: bool| {
+            let ud: AnyUserData = lua.globals().get("__lua_config")?;
+            let mut lua_cfg = ud.borrow_mut::<LuaConfig>()?;
+            Arc::make_mut(&mut lua_cfg.config).recursive = val;
+            Ok(())
+        })?,
+    )?;
+
+    module.set(
+        "set_invert",
+        lua.create_function(|lua, val: bool| {
+            let ud: AnyUserData = lua.globals().get("__lua_config")?;
+            let mut lua_cfg = ud.borrow_mut::<LuaConfig>()?;
+            Arc::make_mut(&mut lua_cfg.config).invert = val;
+            Ok(())
+        })?,
+    )?;
+
+    module.set(
+        "set_filter",
+        lua.create_function(|lua, val: Option<String>| {
+            let ud: AnyUserData = lua.globals().get("__lua_config")?;
+            let mut lua_cfg = ud.borrow_mut::<LuaConfig>()?;
+            Arc::make_mut(&mut lua_cfg.config).filter = val;
+            Ok(())
+        })?,
+    )?;
+
+    module.set(
         "run",
         lua.create_function(|lua_ctx, path: String| {
             let ud: AnyUserData = lua_ctx.globals().get("__lua_config")?;
             let lua_cfg_ref = ud.borrow::<LuaConfig>()?;
             let cfg = lua_cfg_ref.config.clone();
-            let rt = Runtime::new()?;
 
-            let results = rt.block_on(async {
-                let mut processed = Vec::new();
-                let args = crate::RunArgs {
-                    input_path: PathBuf::from(&path),
-                    output_file: None,
-                    config_path: PathBuf::from(""),
-                    verbose: false,
-                    dry_run: false,
-                    backup: false,
-                    interactive: false,
-                    recursive: cfg.recursive,
-                    filter: cfg.filter.clone(),
-                    invert: cfg.invert,
-                };
-
-                if let Err(e) = crate::process_recursive(&args, &cfg).await {
-                    processed.push(format!("Error: {:?}", e));
-                }
-
-                processed
-            });
+            let results = run_blocking(path, cfg);
 
             Ok(results)
         })?,
@@ -103,4 +112,36 @@ pub fn init(lua: &Lua) -> Result<()> {
 
     lua.globals().set("filesculptor", module)?;
     Ok(())
+}
+
+fn run_blocking(path: String, cfg: Arc<Config>) -> Vec<String> {
+    // spawn a brand-new OS thread just for this one call
+    thread::spawn(move || {
+        // inside this thread we can make a fresh runtime
+        let rt = Runtime::new().expect("failed to create Tokio runtime");
+        rt.block_on(async move {
+            let mut processed = Vec::new();
+            let args = crate::RunArgs {
+                input_path: PathBuf::from(&path),
+                output_file: None,
+                config_path: PathBuf::from(""),
+                verbose: false,
+                dry_run: false,
+                backup: false,
+                interactive: false,
+                recursive: cfg.recursive,
+                filter: cfg.filter.clone(),
+                invert: cfg.invert,
+            };
+            if let Ok(vec) = crate::process_recursive(&args, &cfg).await {
+                for p in vec {
+                    processed.push(p.display().to_string());
+                }
+            }
+            processed
+        })
+    })
+    // block the *caller* until that thread finishes
+    .join()
+    .expect("blocking thread panicked")
 }
