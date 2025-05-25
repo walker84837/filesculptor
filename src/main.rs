@@ -120,12 +120,8 @@ async fn process_file(args: &RunArgs, config: &Config, path: &Path) -> Result<Pa
         }
     }
 
-    if let Some(output_path) = &args.output_file {
-        tokio_fs::write(output_path, result.as_bytes()).await?;
-    } else {
-        // Handle single file output to stdout
-        print!("{}", result);
-    }
+    let output_path = args.output_file.as_deref().unwrap_or(path);
+    tokio_fs::write(output_path, result.as_bytes()).await?;
 
     info!("Processed file: {:?}", path);
     Ok(path.to_path_buf())
